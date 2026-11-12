@@ -9,7 +9,8 @@ const SCH: Partial<Record<ReqStatus, string>> = { Cancelled: "Dibatalkan", "In P
 interface Ctx { db: DB; ready: boolean; role: Role; setRole(r: Role): void; area: 0 | AreaId; setArea(a: 0 | AreaId): void;
   reset(): void; addRequest(r: NewReq): string; setUnitStatus(id: string, s: UnitStatus, note: string): void;
   approve(id: string, qty: number): string | null; reject(id: string, reason: string): void;
-  saveAttendance(a: Omit<Attendance, "id">): void; setReqStatus(id: string, s: ReqStatus): void; assign(reqId: string, unitId: string, nik: string): string | null }
+  saveAttendance(a: Omit<Attendance, "id">): void; addSchedule(x: Omit<Schedule, "id" | "status">): string | null;
+  updateSchedule(id: string, p: Partial<Schedule>): string | null; cancelSchedule(id: string): void; setReqStatus(id: string, s: ReqStatus): void; assign(reqId: string, unitId: string, nik: string): string | null }
 const C = createContext<Ctx>(null as unknown as Ctx);
 export const useStore = () => useContext(C);
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -54,10 +55,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       requests: d.requests.map(x => x.id === reqId ? { ...x, assigned: n, status: n >= x.approved ? "Assigned" : x.status } : x) }));
     return null;
   };
+  const addSchedule = (x: Omit<Schedule, "id" | "status">) => {
+    const s: Schedule = { ...x, id: `SCH-${String(db.schedules.length + 1).padStart(4, "0")}`, status: "Dijadwalkan" };
+    const err = validateSchedule(db, s); if (err) return err;
+    setDb(d => ({ ...d, schedules: [...d.schedules, s] })); return null;
+  };
+  const updateSchedule = (id: string, p: Partial<Schedule>) => {
+    const s = { ...db.schedules.find(x => x.id === id)!, ...p };
+    const err = validateSchedule(db, s); if (err) return err;
+    setDb(d => ({ ...d, schedules: d.schedules.map(x => x.id === id ? s : x) })); return null;
+  };
+  const cancelSchedule = (id: string) => setDb(d => ({ ...d, schedules: d.schedules.map(x => x.id === id ? { ...x, status: "Dibatalkan" } : x) }));
   const saveAttendance = (a: Omit<Attendance, "id">) => setDb(d => {
     const i = d.attendance.findIndex(x => x.date === a.date && x.nik === a.nik);
     if (i >= 0) { const c = [...d.attendance]; c[i] = { ...c[i], ...a }; return { ...d, attendance: c }; }
     return { ...d, attendance: [...d.attendance, { ...a, id: `ATT-${a.date}-${a.nik}` }] };
   });
-  return <C.Provider value={{ db, ready, role, setRole, area, setArea, reset, addRequest, setUnitStatus, approve, reject, saveAttendance, setReqStatus, assign }}>{children}</C.Provider>;
+  return <C.Provider value={{ db, ready, role, setRole, area, setArea, reset, addRequest, setUnitStatus, approve, reject, saveAttendance, addSchedule, updateSchedule, cancelSchedule, setReqStatus, assign }}>{children}</C.Provider>;
 }

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Truck, ClipboardList, Activity, UserCheck, CalendarDays, Menu } from "lucide-react";
+import { LayoutDashboard, Truck, ClipboardList, Activity, UserCheck, CalendarDays, FileText, Menu } from "lucide-react";
 import { useState, ReactNode } from "react";
 import { useStore } from "@/lib/store";
 import { AREAS, Role } from "@/lib/types";
@@ -11,6 +11,7 @@ const NAV = [
   { href: "/monitoring", label: "Monitoring HT & DT", icon: Activity, roles: ["super_admin", "admin_area", "management"] },
   { href: "/absensi", label: "Absensi Driver", icon: UserCheck, roles: ["super_admin", "admin_area", "management"] },
   { href: "/jadwal", label: "Jadwal Kendaraan", icon: CalendarDays, roles: ["super_admin", "admin_area", "management"] },
+  { href: "/rekap", label: "Rekap Harian", icon: FileText, roles: ["super_admin", "admin_area", "management"] },
   { href: "/admin", label: "Admin Request", icon: ClipboardList, roles: ["super_admin", "admin_area", "management"] },
   { href: "/request", label: "Request Truk", icon: Truck, roles: ["super_admin", "user"] },
 ];

@@ -6,7 +6,7 @@ import { span } from "@/lib/logic";
 const today = () => new Date().toISOString().slice(0, 10);
 const HARI = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
 const ST: Record<string, string> = { Dijadwalkan: "bg-blue-200", Berjalan: "bg-green-300", Selesai: "bg-gray-300", Dibatalkan: "bg-red-100 line-through" };
-const blank = (d: string, a: number) => ({ date: d, unitId: "", nik: "", area: (a || 1) as AreaId, destination: "", activity: "", start: "07:00", end: "15:00", requestId: "" });
+const blank = (d: string, a: number) => ({ date: d, unitId: "", nik: "", area: (a || 1) as AreaId, destination: "", activity: "", start: "07:00", end: "15:00", requestId: "", department: "", userName: "", userPhone: "" });
 const week = (d: string) => { const t = new Date(d + "T00:00:00Z"); t.setUTCDate(t.getUTCDate() - (t.getUTCDay() + 6) % 7);
   return Array.from({ length: 7 }, (_, i) => { const x = new Date(t); x.setUTCDate(t.getUTCDate() + i); return x.toISOString().slice(0, 10); }); };
 export default function Jadwal() {
@@ -22,10 +22,10 @@ export default function Jadwal() {
   const drv = (nik: string) => db.drivers.find(d => d.nik === nik)?.name ?? nik;
   const startNew = () => { setEditId(""); setF(blank(date, area)); setMsg(""); setOpen(true); };
   const startEdit = (s: Schedule) => { if (!can || s.status === "Selesai" || s.status === "Dibatalkan") return;
-    setEditId(s.id); setF({ date: s.date, unitId: s.unitId, nik: s.driverNik, area: s.area, destination: s.destination, activity: s.activity, start: s.start, end: s.end, requestId: s.requestId ?? "" }); setMsg(""); setOpen(true); };
+    setEditId(s.id); setF({ date: s.date, unitId: s.unitId, nik: s.driverNik, area: s.area, destination: s.destination, activity: s.activity, start: s.start, end: s.end, requestId: s.requestId ?? "", department: s.department ?? "", userName: s.userName ?? "", userPhone: s.userPhone ?? "" }); setMsg(""); setOpen(true); };
   const save = () => {
     if (!f.unitId || !f.nik || !f.date || !f.destination.trim() || !f.activity.trim()) return setMsg("Lengkapi tanggal, unit, driver, tujuan, dan kegiatan.");
-    const b = { date: f.date, unitId: f.unitId, driverNik: f.nik, area: f.area, destination: f.destination.trim(), activity: f.activity.trim(), start: f.start, end: f.end, requestId: f.requestId || undefined };
+    const b = { date: f.date, unitId: f.unitId, driverNik: f.nik, area: f.area, destination: f.destination.trim(), activity: f.activity.trim(), start: f.start, end: f.end, requestId: f.requestId || undefined, department: f.department.trim() || undefined, userName: f.userName.trim() || undefined, userPhone: f.userPhone.trim() || undefined };
     const e = editId ? updateSchedule(editId, b) : addSchedule(b);
     if (e) return setMsg(e); setOpen(false); setMsg(""); };
   const hadir = db.drivers.filter(d => d.active && (d.nik === f.nik || db.attendance.some(a => a.nik === d.nik && a.date === f.date && a.status === "Hadir")));
@@ -51,6 +51,9 @@ export default function Jadwal() {
           <input className="inp" placeholder="Kegiatan" value={f.activity} onChange={e => set("activity", e.target.value)} />
           <input className="inp" type="time" value={f.start} onChange={e => set("start", e.target.value)} />
           <input className="inp" type="time" value={f.end} onChange={e => set("end", e.target.value)} /></div>
+        <div className="grid gap-2 md:grid-cols-3"><input className="inp" placeholder="Department (opsional)" value={f.department} onChange={e => set("department", e.target.value)} />
+          <input className="inp" placeholder="Nama user (opsional)" value={f.userName} onChange={e => set("userName", e.target.value)} />
+          <input className="inp" placeholder="No. HP user (opsional)" value={f.userPhone} onChange={e => set("userPhone", e.target.value)} /></div>
         <select className="inp" value={f.requestId} onChange={e => set("requestId", e.target.value)}><option value="">Tanpa tautan request</option>{reqs.map(r => <option key={r.id} value={r.id}>{r.id} — {r.requester}</option>)}</select>
         {msg && <p className="text-sm font-medium text-red-700">{msg}</p>}
         <div className="flex gap-2"><button className="btn" onClick={save}>Simpan</button><button className="btn bg-gray-600" onClick={() => setOpen(false)}>Tutup</button></div></div>)}

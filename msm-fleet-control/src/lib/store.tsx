@@ -48,7 +48,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const u = db.units.find(x => x.id === unitId);
     if (u && u.type !== r.type) return "Jenis unit tidak sesuai permintaan.";
     const s: Schedule = { id: `SCH-${String(db.schedules.length + 1).padStart(4, "0")}`, date: r.date, unitId, driverNik: nik, area: r.area,
-      destination: r.destination, activity: r.activity, start: r.start, end: r.end, status: "Dijadwalkan", requestId: r.id };
+      destination: r.destination, activity: r.activity, start: r.start, end: r.end, status: "Dijadwalkan", requestId: r.id,
+      department: r.department, userName: r.requester, userPhone: r.phone };
     const err = validateSchedule(db, s); if (err) return err;
     const n = r.assigned + 1;
     setDb(d => ({ ...d, schedules: [...d.schedules, s],

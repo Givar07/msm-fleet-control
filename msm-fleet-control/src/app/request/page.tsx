@@ -5,11 +5,11 @@ import { AREAS, AreaId, UnitType } from "@/lib/types";
 export default function RequestPage() {
   const { db, addRequest, role, ready } = useStore();
   const [name, setName] = useState(""); const [msg, setMsg] = useState(""); const [err, setErr] = useState("");
-  const [f, setF] = useState({ area: 1 as AreaId, type: "HT" as UnitType, qty: 1, date: "", start: "07:00", end: "15:00", destination: "", activity: "", note: "" });
+  const [f, setF] = useState({ area: 1 as AreaId, type: "HT" as UnitType, qty: 1, date: "", start: "07:00", end: "15:00", destination: "", activity: "", note: "", department: "", phone: "" });
   if (!ready) return null;
   const set = (k: string, v: string | number) => setF({ ...f, [k]: v });
   const submit = (e: FormEvent) => { e.preventDefault(); setMsg("");
-    if (!name.trim() || !f.destination.trim() || !f.activity.trim() || !f.date || f.qty < 1) return setErr("Lengkapi nama, tanggal, jumlah, tujuan, dan kegiatan.");
+    if (!name.trim() || !f.destination.trim() || !f.department.trim() || !f.phone.trim() || !f.activity.trim() || !f.date || f.qty < 1) return setErr("Lengkapi nama, department, no. HP, tanggal, jumlah, tujuan, dan kegiatan.");
     setErr(""); const id = addRequest({ requester: name.trim(), ...f }); setMsg(`Request ${id} berhasil dikirim dengan status Pending.`); };
   const mine = role === "user" ? db.requests.filter(r => name && r.requester.toLowerCase() === name.trim().toLowerCase()) : db.requests;
   return (
@@ -17,6 +17,8 @@ export default function RequestPage() {
       <form onSubmit={submit} className="space-y-3 rounded-lg bg-white p-4 shadow-sm">
         <h1 className="text-xl font-bold">Request Truk</h1>
         <input className="inp" placeholder="Nama Pemohon" value={name} onChange={e => setName(e.target.value)} />
+        <div className="grid grid-cols-2 gap-2"><input className="inp" placeholder="Department" value={f.department} onChange={e => set("department", e.target.value)} />
+          <input className="inp" placeholder="No. HP Pemohon" value={f.phone} onChange={e => set("phone", e.target.value)} /></div>
         <div className="grid grid-cols-2 gap-2">
           <select className="inp" value={f.area} onChange={e => set("area", Number(e.target.value))}>{([1, 2, 3] as const).map(a => <option key={a} value={a}>{AREAS[a]}</option>)}</select>
           <select className="inp" value={f.type} onChange={e => set("type", e.target.value)}><option>HT</option><option>DT</option></select>

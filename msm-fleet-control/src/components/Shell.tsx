@@ -1,13 +1,14 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Truck, ClipboardList, Menu } from "lucide-react";
+import { LayoutDashboard, Truck, ClipboardList, Activity, Menu } from "lucide-react";
 import { useState, ReactNode } from "react";
 import { useStore } from "@/lib/store";
 import { AREAS, Role } from "@/lib/types";
 const ROLES: Record<Role, string> = { super_admin: "Fleet Super Admin", admin_area: "Admin Area", user: "User / Pemohon", management: "Management" };
 const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["super_admin", "admin_area", "management"] },
+  { href: "/monitoring", label: "Monitoring HT & DT", icon: Activity, roles: ["super_admin", "admin_area", "management"] },
   { href: "/admin", label: "Admin Request", icon: ClipboardList, roles: ["super_admin", "admin_area", "management"] },
   { href: "/request", label: "Request Truk", icon: Truck, roles: ["super_admin", "user"] },
 ];

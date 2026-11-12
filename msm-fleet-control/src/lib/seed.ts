@@ -19,5 +19,5 @@ export function seed(): DB {
     { ...base, id: "REQ-0002", requester: "Maria Kahi", department: "Civil", phone: "0813-5550-0002", area: 2 as AreaId, type: "DT" as const, qty: 2, destination: "Petak B-04", activity: "Pengangkutan Tanah", status: "Pending" as const },
     { ...base, id: "REQ-0003", requester: "Daniel Umbu", department: "Workshop", phone: "0813-5550-0003", area: 3 as AreaId, type: "HT" as const, qty: 3, destination: "Petak C-21", activity: "Pengangkutan Tebu", status: "Approved" as const, approved: 3 },
   ];
-  return { units, drivers, attendance, requests, schedules: [], history: [] };
+  return { units, drivers, attendance, requests, schedules: [], history: [], activities: ["Pengangkutan Tebu", "Pengangkutan Tanah", "Pengangkutan Material"] };
 }

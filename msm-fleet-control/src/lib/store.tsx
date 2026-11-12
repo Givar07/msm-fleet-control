@@ -1,6 +1,6 @@
 "use client";
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { Attendance, AreaId, DB, ReqStatus, Role, Schedule, TruckRequest, UnitStatus } from "./types";
+import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
+import { Attendance, AreaId, DB, Driver, Unit, ReqStatus, Role, Schedule, TruckRequest, UnitStatus } from "./types";
 import { seed } from "./seed";
 import { validateSchedule } from "./logic";
 const KEY = "msm-fleet-v1";
@@ -10,7 +10,9 @@ interface Ctx { db: DB; ready: boolean; role: Role; setRole(r: Role): void; area
   reset(): void; addRequest(r: NewReq): string; setUnitStatus(id: string, s: UnitStatus, note: string): void;
   approve(id: string, qty: number): string | null; reject(id: string, reason: string): void;
   saveAttendance(a: Omit<Attendance, "id">): void; addSchedule(x: Omit<Schedule, "id" | "status">): string | null;
-  updateSchedule(id: string, p: Partial<Schedule>): string | null; cancelSchedule(id: string): void; setReqStatus(id: string, s: ReqStatus): void; assign(reqId: string, unitId: string, nik: string): string | null }
+  updateSchedule(id: string, p: Partial<Schedule>): string | null; cancelSchedule(id: string): void;
+  full: DB; saveUnit(u: Unit, isNew: boolean): string | null; saveDriver(r: Driver, isNew: boolean): string | null;
+  setActive(kind: "unit" | "driver", id: string, active: boolean): void; saveActivities(a: string[]): void; setReqStatus(id: string, s: ReqStatus): void; assign(reqId: string, unitId: string, nik: string): string | null }
 const C = createContext<Ctx>(null as unknown as Ctx);
 export const useStore = () => useContext(C);
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -67,10 +69,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setDb(d => ({ ...d, schedules: d.schedules.map(x => x.id === id ? s : x) })); return null;
   };
   const cancelSchedule = (id: string) => setDb(d => ({ ...d, schedules: d.schedules.map(x => x.id === id ? { ...x, status: "Dibatalkan" } : x) }));
+  const saveUnit = (u: Unit, isNew: boolean) => {
+    const id = u.id.trim().toUpperCase(); if (!id) return "Nomor unit wajib diisi.";
+    if (isNew && db.units.some(x => x.id === id)) return "Nomor unit sudah ada.";
+    const n = { ...u, id, updatedAt: new Date().toISOString() };
+    setDb(d => ({ ...d, units: isNew ? [...d.units, n] : d.units.map(x => x.id === id ? { ...x, type: n.type, area: n.area, location: n.location } : x) })); return null;
+  };
+  const saveDriver = (r: Driver, isNew: boolean) => {
+    const nik = r.nik.trim(); if (!nik || !r.name.trim()) return "NIK dan nama wajib diisi.";
+    if (isNew && db.drivers.some(x => x.nik === nik)) return "NIK sudah ada.";
+    const n = { ...r, nik, name: r.name.trim(), phone: r.phone?.trim() };
+    setDb(d => ({ ...d, drivers: isNew ? [...d.drivers, n] : d.drivers.map(x => x.nik === nik ? { ...x, ...n } : x) })); return null;
+  };
+  const setActive = (kind: "unit" | "driver", id: string, active: boolean) => setDb(d => kind === "unit"
+    ? { ...d, units: d.units.map(x => x.id === id ? { ...x, active } : x) } : { ...d, drivers: d.drivers.map(x => x.nik === id ? { ...x, active } : x) });
+  const saveActivities = (a: string[]) => setDb(d => ({ ...d, activities: a }));
+  const view = useMemo(() => ({ ...db, units: db.units.filter(u => u.active !== false) }), [db]);
   const saveAttendance = (a: Omit<Attendance, "id">) => setDb(d => {
     const i = d.attendance.findIndex(x => x.date === a.date && x.nik === a.nik);
     if (i >= 0) { const c = [...d.attendance]; c[i] = { ...c[i], ...a }; return { ...d, attendance: c }; }
     return { ...d, attendance: [...d.attendance, { ...a, id: `ATT-${a.date}-${a.nik}` }] };
   });
-  return <C.Provider value={{ db, ready, role, setRole, area, setArea, reset, addRequest, setUnitStatus, approve, reject, saveAttendance, addSchedule, updateSchedule, cancelSchedule, setReqStatus, assign }}>{children}</C.Provider>;
+  return <C.Provider value={{ db: view, full: db, ready, role, setRole, area, setArea, reset, addRequest, setUnitStatus, approve, reject, saveAttendance, addSchedule, updateSchedule, cancelSchedule, setReqStatus, assign, saveUnit, saveDriver, setActive, saveActivities }}>{children}</C.Provider>;
 }

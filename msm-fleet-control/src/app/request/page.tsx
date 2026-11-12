@@ -27,7 +27,8 @@ export default function RequestPage() {
           <input className="inp" type="time" value={f.start} onChange={e => set("start", e.target.value)} />
           <input className="inp" type="time" value={f.end} onChange={e => set("end", e.target.value)} /></div>
         <input className="inp" placeholder="Tujuan / lokasi (petak, reservoir)" value={f.destination} onChange={e => set("destination", e.target.value)} />
-        <input className="inp" placeholder="Nama kegiatan" value={f.activity} onChange={e => set("activity", e.target.value)} />
+        <input className="inp" list="act" placeholder="Nama kegiatan" value={f.activity} onChange={e => set("activity", e.target.value)} />
+        <datalist id="act">{(db.activities ?? []).map(a => <option key={a} value={a} />)}</datalist>
         <textarea className="inp" placeholder="Keterangan tambahan" value={f.note} onChange={e => set("note", e.target.value)} />
         {err && <p className="text-sm text-red-600">{err}</p>}{msg && <p className="text-sm text-green-700">{msg}</p>}
         <button className="btn">Kirim Request</button>

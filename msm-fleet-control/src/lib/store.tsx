@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { AreaId, DB, ReqStatus, Role, Schedule, TruckRequest, UnitStatus } from "./types";
+import { Attendance, AreaId, DB, ReqStatus, Role, Schedule, TruckRequest, UnitStatus } from "./types";
 import { seed } from "./seed";
 import { validateSchedule } from "./logic";
 const KEY = "msm-fleet-v1";
@@ -9,7 +9,7 @@ const SCH: Partial<Record<ReqStatus, string>> = { Cancelled: "Dibatalkan", "In P
 interface Ctx { db: DB; ready: boolean; role: Role; setRole(r: Role): void; area: 0 | AreaId; setArea(a: 0 | AreaId): void;
   reset(): void; addRequest(r: NewReq): string; setUnitStatus(id: string, s: UnitStatus, note: string): void;
   approve(id: string, qty: number): string | null; reject(id: string, reason: string): void;
-  setReqStatus(id: string, s: ReqStatus): void; assign(reqId: string, unitId: string, nik: string): string | null }
+  saveAttendance(a: Omit<Attendance, "id">): void; setReqStatus(id: string, s: ReqStatus): void; assign(reqId: string, unitId: string, nik: string): string | null }
 const C = createContext<Ctx>(null as unknown as Ctx);
 export const useStore = () => useContext(C);
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -54,5 +54,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       requests: d.requests.map(x => x.id === reqId ? { ...x, assigned: n, status: n >= x.approved ? "Assigned" : x.status } : x) }));
     return null;
   };
-  return <C.Provider value={{ db, ready, role, setRole, area, setArea, reset, addRequest, setUnitStatus, approve, reject, setReqStatus, assign }}>{children}</C.Provider>;
+  const saveAttendance = (a: Omit<Attendance, "id">) => setDb(d => {
+    const i = d.attendance.findIndex(x => x.date === a.date && x.nik === a.nik);
+    if (i >= 0) { const c = [...d.attendance]; c[i] = { ...c[i], ...a }; return { ...d, attendance: c }; }
+    return { ...d, attendance: [...d.attendance, { ...a, id: `ATT-${a.date}-${a.nik}` }] };
+  });
+  return <C.Provider value={{ db, ready, role, setRole, area, setArea, reset, addRequest, setUnitStatus, approve, reject, saveAttendance, setReqStatus, assign }}>{children}</C.Provider>;
 }

@@ -11,4 +11,4 @@ export interface TruckRequest { id: string; requester: string; area: AreaId; typ
 export interface Schedule { id: string; date: string; unitId: string; driverNik: string; area: AreaId; destination: string; activity: string; start: string; end: string; status: string; requestId?: string }
 export interface StatusHistory { id: string; unitId: string; from: UnitStatus; to: UnitStatus; note: string; at: string }
 export interface DB { units: Unit[]; drivers: Driver[]; attendance: Attendance[]; requests: TruckRequest[]; schedules: Schedule[]; history: StatusHistory[] }
-export const AREAS: Record<AreaId, string> = { 1: "Area 1 — Wanga (PRE)", 2: "Area 2 — Kabaru (RME)", 3: "Area 3 — Praibakul (WSE)" };
+export const AREAS: Record<AreaId, string> = { 1: "Area 1", 2: "Area 2", 3: "Area 3" };

@@ -1,11 +1,15 @@
 "use client";
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { AreaId, DB, Role, TruckRequest, UnitStatus } from "./types";
+import { AreaId, DB, ReqStatus, Role, Schedule, TruckRequest, UnitStatus } from "./types";
 import { seed } from "./seed";
+import { validateSchedule } from "./logic";
 const KEY = "msm-fleet-v1";
 type NewReq = Omit<TruckRequest, "id" | "status" | "approved" | "assigned" | "createdAt">;
+const SCH: Partial<Record<ReqStatus, string>> = { Cancelled: "Dibatalkan", "In Progress": "Berjalan", Completed: "Selesai" };
 interface Ctx { db: DB; ready: boolean; role: Role; setRole(r: Role): void; area: 0 | AreaId; setArea(a: 0 | AreaId): void;
-  reset(): void; addRequest(r: NewReq): string; setUnitStatus(id: string, s: UnitStatus, note: string): void }
+  reset(): void; addRequest(r: NewReq): string; setUnitStatus(id: string, s: UnitStatus, note: string): void;
+  approve(id: string, qty: number): string | null; reject(id: string, reason: string): void;
+  setReqStatus(id: string, s: ReqStatus): void; assign(reqId: string, unitId: string, nik: string): string | null }
 const C = createContext<Ctx>(null as unknown as Ctx);
 export const useStore = () => useContext(C);
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -16,6 +20,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => { const raw = localStorage.getItem(KEY); setDb(raw ? JSON.parse(raw) : seed()); setReady(true); }, []);
   useEffect(() => { if (ready) localStorage.setItem(KEY, JSON.stringify(db)); }, [db, ready]);
   const reset = () => { localStorage.removeItem(KEY); setDb(seed()); };
+  const patchReq = (id: string, p: Partial<TruckRequest>) =>
+    setDb(d => ({ ...d, requests: d.requests.map(x => x.id === id ? { ...x, ...p } : x) }));
   const addRequest = (r: NewReq) => {
     const id = `REQ-${String(db.requests.length + 1).padStart(4, "0")}`;
     setDb(d => ({ ...d, requests: [...d.requests, { ...r, id, status: "Pending", approved: 0, assigned: 0, createdAt: new Date().toISOString() }] }));
@@ -26,5 +32,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return { ...d, units: d.units.map(x => x.id === id ? { ...x, status: s, note, updatedAt: at } : x),
       history: [...d.history, { id: `H-${d.history.length + 1}`, unitId: id, from: u.status, to: s, note, at }] };
   });
-  return <C.Provider value={{ db, ready, role, setRole, area, setArea, reset, addRequest, setUnitStatus }}>{children}</C.Provider>;
+  const approve = (id: string, qty: number) => {
+    const r = db.requests.find(x => x.id === id)!;
+    if (!Number.isInteger(qty) || qty < 1 || qty > r.qty) return `Jumlah disetujui harus 1–${r.qty}.`;
+    patchReq(id, { approved: qty, status: qty >= r.qty ? "Approved" : "Partially Approved", rejectReason: undefined }); return null;
+  };
+  const reject = (id: string, reason: string) => patchReq(id, { status: "Rejected", rejectReason: reason });
+  const setReqStatus = (id: string, s: ReqStatus) => setDb(d => ({ ...d,
+    requests: d.requests.map(x => x.id === id ? { ...x, status: s } : x),
+    schedules: SCH[s] ? d.schedules.map(x => x.requestId === id && x.status !== "Dibatalkan" ? { ...x, status: SCH[s]! } : x) : d.schedules }));
+  const assign = (reqId: string, unitId: string, nik: string) => {
+    const r = db.requests.find(x => x.id === reqId)!;
+    if (r.assigned >= r.approved) return "Jumlah unit yang disetujui sudah terpenuhi.";
+    const u = db.units.find(x => x.id === unitId);
+    if (u && u.type !== r.type) return "Jenis unit tidak sesuai permintaan.";
+    const s: Schedule = { id: `SCH-${String(db.schedules.length + 1).padStart(4, "0")}`, date: r.date, unitId, driverNik: nik, area: r.area,
+      destination: r.destination, activity: r.activity, start: r.start, end: r.end, status: "Dijadwalkan", requestId: r.id };
+    const err = validateSchedule(db, s); if (err) return err;
+    const n = r.assigned + 1;
+    setDb(d => ({ ...d, schedules: [...d.schedules, s],
+      requests: d.requests.map(x => x.id === reqId ? { ...x, assigned: n, status: n >= x.approved ? "Assigned" : x.status } : x) }));
+    return null;
+  };
+  return <C.Provider value={{ db, ready, role, setRole, area, setArea, reset, addRequest, setUnitStatus, approve, reject, setReqStatus, assign }}>{children}</C.Provider>;
 }

@@ -82,7 +82,41 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     push(sb, prev.current, db, roleRef.current).then(async () => { const a = JSON.stringify(db.activities ?? []);
       if (a !== prevAct.current) { prevAct.current = a; const r = await sb.from("settings").upsert({ id: "activities", data: { list: db.activities ?? [] } }); if (r.error) console.error(r.error); } });
   }, [db, ready]);
-  const login = async (email: string, pw: string) => { const { error } = await sb!.auth.signInWithPassword({ email, password: pw }); return error ? "Email atau password salah." : null; };
+const login = async (username: string, pw: string): Promise<string | null> => {
+  if (!sb) return "Koneksi autentikasi belum tersedia.";
+
+  try {
+    const response = await fetch("/api/auth/username-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+      body: JSON.stringify({
+        username: username.trim(),
+        password: pw,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return result.error || "Username atau password salah.";
+    }
+
+    if (!result.access_token || !result.refresh_token) {
+      return "Sesi login tidak valid.";
+    }
+
+    const { error } = await sb.auth.setSession({
+      access_token: result.access_token,
+      refresh_token: result.refresh_token,
+    });
+
+    return error ? "Gagal mengaktifkan sesi login." : null;
+  } catch {
+    return "Tidak dapat menghubungi layanan login.";
+  }
+};
+
   const logout = () => { sb?.auth.signOut(); };
   const reset = () => { if (cloud) setDb(seed()); else { localStorage.removeItem(KEY); setDb(seed()); } };
   const patchReq = (id: string, p: Partial<TruckRequest>) => setDb(d => ({ ...d, requests: d.requests.map(x => (x.id === id ? { ...x, ...p } : x)) }));

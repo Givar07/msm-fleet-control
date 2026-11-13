@@ -6,7 +6,7 @@ import { useState, ReactNode } from "react";
 import { useStore } from "@/lib/store";
 import { AREAS, Role } from "@/lib/types";
 import Login from "./Login";
-const ROLES: Record<Role, string> = { super_admin: "Fleet Analyst", admin_area: "Admin Area", user: "User / Pemohon", management: "Management" };
+const ROLES: Record<Role, string> = { super_admin: "Fleet Super Admin", admin_area: "Admin Area", user: "User / Pemohon", management: "Management" };
 const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["super_admin", "admin_area", "management"] },
   { href: "/monitoring", label: "Monitoring HT & DT", icon: Activity, roles: ["super_admin", "admin_area", "management"] },
@@ -22,7 +22,7 @@ export default function Shell({ children }: { children: ReactNode }) {
   const { role, setRole, area, setArea, reset, cloud, authReady, session, profileMissing, ready, userName, login, logout } = useStore(); const p = usePathname(); const [open, setOpen] = useState(false);
   if (cloud && !authReady) return <p className="p-6">Memuat…</p>;
   if (cloud && !session) return <Login login={login} />;
-  if (cloud && profileMissing) return <div className="p-6"><p>Akun Anda belum diberi peran. Hubungi Fleet Analyst.</p><button className="btn mt-3" onClick={logout}>Keluar</button></div>;
+  if (cloud && profileMissing) return <div className="p-6"><p>Akun Anda belum diberi peran. Hubungi Fleet Super Admin.</p><button className="btn mt-3" onClick={logout}>Keluar</button></div>;
   if (cloud && !ready) return <p className="p-6">Memuat data…</p>;
   return (
     <div className="flex min-h-screen">
@@ -37,7 +37,7 @@ export default function Shell({ children }: { children: ReactNode }) {
         <header className="flex flex-wrap items-center gap-2 border-b bg-white p-3">
           <button className="md:hidden" onClick={() => setOpen(!open)} aria-label="Menu"><Menu /></button>
           {cloud ? <span className="text-sm font-medium">{userName} · {ROLES[role]}</span> : <select className="inp w-auto" value={role} onChange={e => setRole(e.target.value as Role)}>
-            {(["super_admin", "user"] as Role[]).map(k => <option key={k} value={k}>{ROLES[k]}</option>)}</select>}
+            {Object.entries(ROLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>}
           <select className="inp w-auto" value={area} disabled={cloud && role === "admin_area"} onChange={e => setArea(Number(e.target.value) as 0 | 1 | 2 | 3)}>
             <option value={0}>Semua Area</option>{([1, 2, 3] as const).map(a => <option key={a} value={a}>{AREAS[a]}</option>)}</select>
           <div className="ml-auto flex gap-2">{(!cloud || role === "super_admin") && <button className="btn" onClick={() => confirm(cloud ? "Ini MENGHAPUS SEMUA data online dan menggantinya dengan data demo. Lanjutkan?" : "Reset semua data demo?") && reset()}>Reset Data Demo</button>}

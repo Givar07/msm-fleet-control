@@ -10,7 +10,7 @@ export default function AdminRequests() {
   const [sel, setSel] = useState(""); const [qty, setQty] = useState(1); const [reason, setReason] = useState("");
   const [unit, setUnit] = useState(""); const [nik, setNik] = useState(""); const [msg, setMsg] = useState("");
   if (!ready) return null;
-  if (role === "user") return <p>Halaman ini hanya untuk Fleet Admin, Admin Area, dan Management.</p>;
+  if (role === "user") return <p>Halaman ini hanya untuk Fleet Analyst.</p>;
   const can = role === "super_admin";
   const list = (area ? db.requests.filter(r => r.area === area) : db.requests).slice().reverse();
   const r = db.requests.find(x => x.id === sel);
@@ -59,7 +59,7 @@ export default function AdminRequests() {
               {r.status === "In Progress" && <button className="btn" onClick={() => setReqStatus(r.id, "Completed")}>Selesaikan</button>}
               <button className="btn bg-gray-600" onClick={() => confirm("Batalkan request ini?") && setReqStatus(r.id, "Cancelled")}>Batalkan</button></div>
           </div>)}
-          {!can && <p className="text-xs text-gray-500">Mode lihat saja. Hanya Fleet Super Admin yang dapat memproses request.</p>}
+          {!can && <p className="text-xs text-gray-500">Mode lihat saja. Hanya Fleet Analyst yang dapat memproses request.</p>}
           {msg && <p className="text-sm font-medium">{msg}</p>}
         </div>)}
     </div>

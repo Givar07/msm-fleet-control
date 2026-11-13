@@ -11,7 +11,7 @@ export default function Master() {
   const [tab, setTab] = useState<Tab>("unit"); const [q, setQ] = useState(""); const [open, setOpen] = useState(false); const [isNew, setIsNew] = useState(true);
   const [u, setU] = useState(newU()); const [d, setD] = useState(newD()); const [act, setAct] = useState(""); const [msg, setMsg] = useState("");
   if (!ready) return null;
-  if (role !== "super_admin") return <p>Master Data hanya dapat diakses Fleet Super Admin.</p>;
+  if (role !== "super_admin") return <p>Master Data hanya dapat diakses Fleet Analyst.</p>;
   const lq = q.trim().toLowerCase();
   const units = full.units.filter(x => x.id.toLowerCase().includes(lq) || x.location.toLowerCase().includes(lq));
   const drivers = full.drivers.filter(x => x.nik.toLowerCase().includes(lq) || x.name.toLowerCase().includes(lq));

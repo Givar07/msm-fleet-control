@@ -4,7 +4,11 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
+const invalidLogin = "Username atau password salah.";
+
 export async function POST(req: NextRequest) {
+  const headers = { "Cache-Control": "no-store" };
+
   try {
     const { username, password } = await req.json();
 
@@ -17,58 +21,46 @@ export async function POST(req: NextRequest) {
       password.length > 1024
     ) {
       return NextResponse.json(
-        { error: "Username atau password salah." },
-        { status: 400 }
+        { error: invalidLogin },
+        { status: 401, headers }
       );
     }
 
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const anonKey =
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    const serviceKey =
-      process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!url || !anonKey || !serviceKey) {
+    const accounts: Record<string, string | undefined> = {
+      "fleet analyst": process.env.AUTH_FLEET_ANALYST_EMAIL,
+      user: process.env.AUTH_REQUESTER_EMAIL,
+    };
+
+    if (
+      !url ||
+      !key ||
+      !process.env.AUTH_FLEET_ANALYST_EMAIL ||
+      !process.env.AUTH_REQUESTER_EMAIL
+    ) {
       return NextResponse.json(
-        { error: "Layanan login belum dikonfigurasi." },
-        { status: 503 }
+        { error: "Konfigurasi login belum lengkap." },
+        { status: 503, headers }
       );
     }
 
-    const admin = createClient(url, serviceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    const normalizedUsername = username
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
 
-    const { data: profile, error: profileError } =
-      await admin
-        .from("profiles")
-        .select("id")
-        .ilike("username", username.trim())
-        .maybeSingle();
+    const email = accounts[normalizedUsername];
 
-    if (profileError || !profile) {
+    if (!email) {
       return NextResponse.json(
-        { error: "Username atau password salah." },
-        { status: 401 }
+        { error: invalidLogin },
+        { status: 401, headers }
       );
     }
 
-    const { data: userData, error: userError } =
-      await admin.auth.admin.getUserById(profile.id);
-
-    const email = userData?.user?.email;
-
-    if (userError || !email) {
-      return NextResponse.json(
-        { error: "Username atau password salah." },
-        { status: 401 }
-      );
-    }
-
-    const auth = createClient(url, anonKey, {
+    const supabase = createClient(url, key, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
@@ -76,15 +68,15 @@ export async function POST(req: NextRequest) {
     });
 
     const { data, error } =
-      await auth.auth.signInWithPassword({
+      await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
     if (error || !data.session) {
       return NextResponse.json(
-        { error: "Username atau password salah." },
-        { status: 401 }
+        { error: invalidLogin },
+        { status: 401, headers }
       );
     }
 
@@ -93,16 +85,12 @@ export async function POST(req: NextRequest) {
         access_token: data.session.access_token,
         refresh_token: data.session.refresh_token,
       },
-      {
-        headers: {
-          "Cache-Control": "no-store",
-        },
-      }
+      { headers }
     );
   } catch {
     return NextResponse.json(
       { error: "Permintaan login tidak valid." },
-      { status: 400 }
+      { status: 400, headers }
     );
   }
 }

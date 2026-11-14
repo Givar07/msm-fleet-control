@@ -21,7 +21,7 @@ const NAV = [
 export default function Shell({ children }: { children: ReactNode }) {
   const { role, setRole, area, setArea, reset, cloud, authReady, session, profileMissing, ready, userName, login, logout } = useStore(); const p = usePathname(); const [open, setOpen] = useState(false);
   if (cloud && !authReady) return <p className="p-6">Memuat…</p>;
-  if (cloud && !session) return <Login login={login} />;
+  if (cloud && !session) return <Login onLogin={login} />;
   if (cloud && profileMissing) return <div className="p-6"><p>Akun Anda belum diberi peran. Hubungi Fleet Analyst.</p><button className="btn mt-3" onClick={logout}>Keluar</button></div>;
   if (cloud && !ready) return <p className="p-6">Memuat data…</p>;
   return (

@@ -9,7 +9,7 @@ export default function Absensi() {
   const { db, area, role, ready, saveAttendance } = useStore();
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10)); const [shiftF, setShiftF] = useState("");
   const [sel, setSel] = useState(""); const [msg, setMsg] = useState("");
-  const [f, setF] = useState({ status: "Hadir" as AttStatus, shift: "Shift 1", in: "06:00", out: "", note: "" });
+  const [f, setF] = useState({ status: "Hadir" as AttStatus, shift: "Shift 1", in: "", out: "", note: "" });
   if (!ready) return null;
   if (role === "user") return <p>Halaman ini tidak tersedia untuk User / Pemohon.</p>;
   const can = role !== "management";
@@ -20,11 +20,10 @@ export default function Absensi() {
   const pct = rows.length ? Math.round(cnt("Hadir") / rows.length * 100) : 0;
   const d0 = db.drivers.find(d => d.nik === sel);
   const open = (d: Driver) => { const r = rec(d.nik); setSel(d.nik); setMsg("");
-    setF(r ? { status: r.status, shift: r.shift, in: r.in ?? "", out: r.out ?? "", note: r.note } : { status: "Hadir", shift: "Shift 1", in: "06:00", out: "", note: "" }); };
+    setF(r ? { status: r.status, shift: r.shift, in: r.in ?? "", out: r.out ?? "", note: r.note } : { status: "Hadir", shift: "Shift 1", in: "", out: "", note: "" }); };
   const save = () => { if (!d0) return;
-    if (f.status === "Hadir" && !f.in) return setMsg("Jam masuk wajib diisi untuk status Hadir.");
     const hd = f.status === "Hadir";
-    saveAttendance({ date, nik: d0.nik, shift: f.shift, status: f.status, in: hd ? f.in : undefined, out: hd && f.out ? f.out : undefined, note: f.note.trim() });
+    saveAttendance({ date, nik: d0.nik, shift: f.shift, status: f.status, in: hd && f.in ? f.in : undefined, out: hd && f.out ? f.out : undefined, note: f.note.trim() });
     const bentrok = !hd && db.schedules.some(s => s.driverNik === d0.nik && s.date === date && s.status !== "Dibatalkan" && s.status !== "Selesai");
     setMsg(bentrok ? "Tersimpan. Perhatian: driver ini masih punya penugasan aktif pada tanggal tersebut." : "Absensi tersimpan."); };
   const hist = db.attendance.filter(a => a.nik === sel).sort((a, b) => b.date.localeCompare(a.date));
@@ -49,8 +48,8 @@ export default function Absensi() {
         <h2 className="font-semibold">{d0.name} ({d0.nik}) · tanggal {date}</h2>
         {can && (<div className="flex flex-wrap items-center gap-2">
           <select className="inp w-auto" value={f.status} onChange={e => setF({ ...f, status: e.target.value as AttStatus })}>{STAT.map(s => <option key={s}>{s}</option>)}</select>
-          <select className="inp w-auto" value={f.shift} onChange={e => setF({ ...f, shift: e.target.value, in: SHIFTS[e.target.value].start })}>
-            {Object.entries(SHIFTS).map(([k, v]) => <option key={k} value={k}>{k} ({v.start}–{v.end})</option>)}</select>
+          <select className="inp w-auto" value={f.shift} onChange={e => setF({ ...f, shift: e.target.value })}>
+            {Object.keys(SHIFTS).map(k => <option key={k} value={k}>{k}</option>)}</select>
           {f.status === "Hadir" && (<><label className="text-xs">Masuk <input className="inp w-auto" type="time" value={f.in} onChange={e => setF({ ...f, in: e.target.value })} /></label>
             <label className="text-xs">Pulang <input className="inp w-auto" type="time" value={f.out} onChange={e => setF({ ...f, out: e.target.value })} /></label></>)}
           <input className="inp w-60" placeholder="Keterangan" value={f.note} onChange={e => setF({ ...f, note: e.target.value })} />

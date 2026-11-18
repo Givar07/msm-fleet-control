@@ -1,4 +1,4 @@
-export type Role = "super_admin" | "admin_area" | "user" | "management";
+export type Role = "super_admin" | "admin_area" | "user" | "management" | "driver";
 export type AreaId = 1 | 2 | 3;
 export type UnitType = "HT" | "DT";
 export type UnitStatus = "Operational" | "Standby" | "Breakdown";

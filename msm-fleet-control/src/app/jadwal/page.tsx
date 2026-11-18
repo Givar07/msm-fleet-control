@@ -10,9 +10,10 @@ const blank = (d: string, a: number) => ({ date: d, unitId: "", nik: "", area: (
 const week = (d: string) => { const t = new Date(d + "T00:00:00Z"); t.setUTCDate(t.getUTCDate() - (t.getUTCDay() + 6) % 7);
   return Array.from({ length: 7 }, (_, i) => { const x = new Date(t); x.setUTCDate(t.getUTCDate() + i); return x.toISOString().slice(0, 10); }); };
 export default function Jadwal() {
-  const { db, area, role, ready, addSchedule, updateSchedule, cancelSchedule } = useStore();
+  const { db, area, role, ready, addSchedule, updateSchedule, cancelSchedule, assign } = useStore();
   const [view, setView] = useState<"hari" | "minggu" | "daftar">("hari"); const [date, setDate] = useState(today()); const [unitF, setUnitF] = useState("");
   const [open, setOpen] = useState(false); const [editId, setEditId] = useState(""); const [f, setF] = useState(blank(today(), 0)); const [msg, setMsg] = useState("");
+  const [pick, setPick] = useState<Record<string, { unit: string; nik: string }>>({}); const [amsg, setAmsg] = useState<Record<string, string>>({});
   if (!ready) return null;
   if (role === "user") return <p>Halaman ini tidak tersedia untuk User / Pemohon.</p>;
   const can = role !== "management";
@@ -32,6 +33,8 @@ export default function Jadwal() {
   const reqs = db.requests.filter(r => ["Approved", "Partially Approved", "Assigned", "In Progress"].includes(r.status));
   const set = (k: string, v: string | number) => setF({ ...f, [k]: v });
   const units = Array.from(new Set(dayList.map(s => s.unitId)));
+  const waiting = db.requests.filter(r => (r.status === "Approved" || r.status === "Partially Approved") && r.assigned < r.approved && (!area || r.area === area))
+    .sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold">Jadwal Kendaraan</h1>
@@ -41,6 +44,23 @@ export default function Jadwal() {
         <select className="inp w-auto" value={unitF} onChange={e => setUnitF(e.target.value)}><option value="">Semua Kendaraan</option>{db.units.map(u => <option key={u.id}>{u.id}</option>)}</select>
         {can && <button className="btn ml-auto" onClick={startNew}>Tambah Jadwal</button>}</div>
       <p className="text-sm text-gray-600">Unit digunakan pada {date}: <b>{units.length}</b>{units.length > 0 && ` (${units.join(", ")})`}</p>
+      {can && waiting.length > 0 && (<div className="space-y-2 rounded-lg border-l-4 border-gold bg-white p-4 shadow-sm">
+        <h2 className="font-semibold">Request Disetujui — tentukan No. Unit &amp; Driver ({waiting.length})</h2>
+        {waiting.map(q => { const p = pick[q.id] ?? { unit: "", nik: "" };
+          const hd = db.drivers.filter(d => d.active && db.attendance.some(a => a.nik === d.nik && a.date === q.date && a.status === "Hadir"));
+          const us = db.units.filter(u => u.type === q.type && u.status !== "Breakdown");
+          const sibuk = (id: string) => db.schedules.some(s => s.unitId === id && s.date === q.date && s.status !== "Dibatalkan" && s.status !== "Selesai");
+          const sibukD = (nik: string) => db.schedules.some(s => s.driverNik === nik && s.date === q.date && s.status !== "Dibatalkan" && s.status !== "Selesai");
+          return (<div key={q.id} className="space-y-2 rounded border p-3 text-sm">
+            <div><b>{q.id}</b> · {q.requester}{q.department && ` (${q.department})`} · {q.type} · Area {q.area} · {q.date} {q.start}–{q.end}<br />{q.destination} — {q.activity} · <b>Unit ke-{q.assigned + 1} dari {q.approved}</b></div>
+            <div className="flex flex-wrap items-center gap-2">
+              <select className="inp w-auto" value={p.unit} onChange={e => setPick({ ...pick, [q.id]: { ...p, unit: e.target.value } })}><option value="">No. Unit {q.type}</option>
+                {us.map(u => <option key={u.id} value={u.id}>{u.id} ({u.status}){sibuk(u.id) ? " — sudah ada jadwal" : ""}</option>)}</select>
+              <select className="inp w-auto" value={p.nik} onChange={e => setPick({ ...pick, [q.id]: { ...p, nik: e.target.value } })}><option value="">Driver hadir ({hd.length})</option>
+                {hd.map(d => <option key={d.nik} value={d.nik}>{d.name}{sibukD(d.nik) ? " — sudah ada jadwal" : ""}</option>)}</select>
+              <button className="btn" disabled={!p.unit || !p.nik} onClick={() => { const e = assign(q.id, p.unit, p.nik); setAmsg({ ...amsg, [q.id]: e ?? "Berhasil ditugaskan." }); if (!e) setPick({ ...pick, [q.id]: { unit: "", nik: "" } }); }}>Tugaskan</button></div>
+            {hd.length === 0 && <p className="text-xs text-amber-700">Belum ada driver dengan absensi Hadir pada {q.date}. Isi dulu di menu Absensi Driver.</p>}
+            {amsg[q.id] && <p className="text-xs font-medium">{amsg[q.id]}</p>}</div>); })}</div>)}
       {open && (<div className="space-y-2 rounded-lg bg-white p-4 shadow-sm"><h2 className="font-semibold">{editId ? `Edit ${editId}` : "Jadwal Baru"}</h2>
         <div className="grid gap-2 md:grid-cols-4">
           <input className="inp" type="date" value={f.date} onChange={e => set("date", e.target.value)} />
